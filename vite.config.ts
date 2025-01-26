@@ -4,6 +4,17 @@ import tsconfigPaths from "vite-tsconfig-paths";
 import Checker from "vite-plugin-checker";
 
 export default defineConfig({
+  base: "/",
+  server: {
+    port: 3000,
+    proxy: {
+      "/api": {
+        target: "https://relate15-be.onrender.com",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ""),
+      },
+    },
+  },
   plugins: [
     react(),
     tsconfigPaths({ parseNative: true }),
@@ -14,10 +25,7 @@ export default defineConfig({
       "@": "/src",
     },
   },
-  server: {
-    port: 3000,
-    open: true,
-  },
+
   build: {
     outDir: "dist",
     sourcemap: true,

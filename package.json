@@ -3,14 +3,19 @@
   "private": true,
   "version": "0.0.4",
   "scripts": {
-    "dev": "pnpm exec vite",
-    "build": "pnpm exec vite build",
-    "preview": "pnpm exec vite preview",
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview --port 4173",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "release": "standard-version && git push --follow-tags origin main"
   },
   "dependencies": {
     "@chakra-ui/react": "^3.4.0",
     "@emotion/react": "^11.14.0",
+    "@fullcalendar/daygrid": "^6.1.15",
+    "@fullcalendar/interaction": "^6.1.15",
+    "@fullcalendar/react": "^6.1.15",
+    "@fullcalendar/timegrid": "^6.1.15",
     "axios": "^1.7.9",
     "framer-motion": "^12.0.5",
     "next-themes": "^0.4.4",

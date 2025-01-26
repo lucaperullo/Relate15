@@ -1,3 +1,4 @@
+// toaster.js
 "use client";
 
 import {
@@ -11,8 +12,9 @@ import {
 import React from "react";
 
 export const toaster = createToaster({
-  placement: "bottom-end",
+  placement: "top-end",
   pauseOnPageIdle: true,
+  duration: 5000,
 });
 
 export const Toaster = () => {
@@ -22,7 +24,7 @@ export const Toaster = () => {
         {(toast) => (
           <Toast.Root width={{ md: "sm" }}>
             {toast.type === "loading" ? (
-              <Spinner size="sm" color="blue.solid" />
+              <Spinner size="sm" color="blue.500" mr={2} />
             ) : (
               <Toast.Indicator />
             )}
