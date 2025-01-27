@@ -6,14 +6,17 @@ import { App } from "./App";
 import { Provider } from "./components/ui/provider";
 import { AuthProvider } from "./context";
 import { NotifyProvider } from "./context/notify";
+import { SocketProvider } from "./context/socket";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <Provider>
     <NotifyProvider>
       <AuthProvider>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
+        <SocketProvider>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </SocketProvider>
       </AuthProvider>
     </NotifyProvider>
   </Provider>

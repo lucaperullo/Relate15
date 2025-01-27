@@ -22,13 +22,13 @@ export const StatusDialog = ({
   status,
   user,
   isLoading,
-  onConfirm,
+  // onConfirm,
   onClose,
 }: {
   status: string;
   user: User | null;
   isLoading: boolean;
-  onConfirm: () => void;
+  // onConfirm: () => void;
   onClose: () => void;
 }) => (
   <DialogRoot open onOpenChange={onClose}>
@@ -75,9 +75,9 @@ export const StatusDialog = ({
             <Button variant="outline" size="sm" mr={3} onClick={onClose}>
               Close
             </Button>
-            <Button colorScheme="blue" size="sm" onClick={onConfirm}>
+            {/* <Button colorScheme="blue" size="sm" onClick={onConfirm}>
               Confirm
-            </Button>
+            </Button> */}
           </>
         ) : (
           <Button variant="outline" size="sm" onClick={onClose}>

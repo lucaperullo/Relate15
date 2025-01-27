@@ -1,3 +1,5 @@
+// src/api/config.ts
+
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export const ENDPOINTS = {
@@ -19,10 +21,10 @@ export const ENDPOINTS = {
     PROFILE: "/user/profile",
   },
   CALENDAR: {
-    EVENTS: "/calendar/events", // Get all events for the user
-    BOOK: "/calendar/book", // Book a new event
-    UPDATE: "/calendar/events/:id", // Update an event
-    DELETE: "/calendar/events/:id", // Delete an event
+    EVENTS: "/calendar/events", // GET all events, POST create event
+    UPDATE: "/calendar/events/:id", // PUT update event
+    DELETE: "/calendar/events/:id", // DELETE event
+    CONFIRM: "/calendar/events/:id/confirm", // POST confirm participation
   },
   HEALTH: "/health",
 };

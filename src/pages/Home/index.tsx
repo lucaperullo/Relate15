@@ -1,3 +1,5 @@
+// src/pages/home/Home.tsx
+
 "use client";
 
 import { Heading, Text, Button, Box, Flex, Grid } from "@chakra-ui/react";
@@ -133,26 +135,7 @@ export const Home = () => {
     );
   };
 
-  const handleConfirmParticipation = () => {
-    notifyPromise(
-      fetch(`${API_BASE_URL}${ENDPOINTS.QUEUE.CONFIRM}`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${sessionStorage.getItem("token")}` },
-      }).then(async (res) => {
-        const data = await res.json();
-        setCurrentStatus("idle");
-        setMatchedUser(null);
-        dispatch({ type: "SET_QUEUE_STATUS", payload: "idle" });
-        setIsDialogOpen(false);
-        return data;
-      }),
-      {
-        loading: { title: "Confirming...", description: "Ending session" },
-        success: { title: "Confirmed!", description: "Session completed" },
-        error: { title: "Error", description: "Confirmation failed" },
-      }
-    );
-  };
+  // Removed handleConfirmParticipation
 
   const handleCheckStatus = () => {
     notifyPromise(
@@ -251,7 +234,7 @@ export const Home = () => {
             status={currentStatus}
             user={matchedUser}
             isLoading={isLoadingMatch}
-            onConfirm={handleConfirmParticipation}
+            // Removed onConfirm handler
             onClose={() => setIsDialogOpen(false)}
           />
         )}
