@@ -14,7 +14,7 @@ import {
   useBreakpointValue,
 } from "@chakra-ui/react";
 import { Link, Outlet } from "react-router";
-import React, { ReactChild, useState } from "react";
+import React, { ReactChild, useState, useEffect } from "react";
 import { ColorModeButton, useColorModeValue } from "./color-mode";
 import {
   RiHomeLine,
@@ -39,9 +39,18 @@ import {
 import { useAuth } from "@/context";
 import { motion } from "framer-motion";
 
+import { API_BASE_URL, ENDPOINTS } from "@/api/config";
+import { ChatDialog } from "../chat/chat-dialog";
+
 export const GenericPage = ({ children }: { children: ReactChild }) => {
   const { state, logout } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [currentMatch, setCurrentMatch] = useState(null);
+  const [matchHistory, setMatchHistory] = useState([]);
+  const [isLoadingCurrent, setIsLoadingCurrent] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [error, setError] = useState("");
+
   const gradient = useColorModeValue(
     "linear(to-r, blue.400, purple.500)",
     "linear(to-r, blue.300, purple.200)"
@@ -51,6 +60,53 @@ export const GenericPage = ({ children }: { children: ReactChild }) => {
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   const closeSidebar = () => setIsSidebarOpen(false);
+
+  const fetchCurrentMatch = async () => {
+    setIsLoadingCurrent(true);
+    setError("");
+    try {
+      const token = sessionStorage.getItem("token");
+      const res = await fetch(
+        `${API_BASE_URL}${ENDPOINTS.QUEUE.CURRENT_MATCH}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      if (!res.ok) throw new Error("Failed to fetch current match");
+      console.log("this is current match -", await res.json());
+      setCurrentMatch(await res.json());
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoadingCurrent(false);
+    }
+  };
+
+  const fetchMatchHistory = async () => {
+    setIsLoadingHistory(true);
+    setError("");
+    try {
+      const token = sessionStorage.getItem("token");
+      const res = await fetch(
+        `${API_BASE_URL}${ENDPOINTS.QUEUE.MATCH_HISTORY}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      if (!res.ok) throw new Error("Failed to fetch match history");
+      console.log(await res.json());
+      setMatchHistory(await res.json());
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCurrentMatch();
+    fetchMatchHistory();
+  }, []);
 
   return (
     <Flex height="100dvh" w="100%" bg="gray.200" _dark={{ bg: "gray.800" }}>
@@ -123,8 +179,6 @@ export const GenericPage = ({ children }: { children: ReactChild }) => {
           )}
 
           <VStack align="stretch" flex={1} pt={isMobile ? "60px" : "0"}>
-            {/* Avatar Section */}
-
             {/* Navigation Links */}
             <Flex flexDir="column" w="100%">
               <ChakraLink asChild p={0}>
@@ -161,15 +215,23 @@ export const GenericPage = ({ children }: { children: ReactChild }) => {
               </ChakraLink>
             </Flex>
 
+            {/* Current Match */}
+            {currentMatch && <ChatDialog match={currentMatch} isCurrent />}
+
+            {/* Match History */}
+            {/* {matchHistory.map((match) => (
+              <ChatDialog key={match.id} match={match} />
+            ))} */}
+
             <Spacer />
+
+            {/* Account Section */}
             <DialogRoot>
               <DialogTrigger asChild>
                 <Box
                   p="4"
                   bg="gray.950"
-                  _light={{
-                    bg: "gray.50",
-                  }}
+                  _light={{ bg: "gray.50" }}
                   cursor="pointer"
                   _hover={{ opacity: 0.8 }}
                   transition="opacity 0.2s"
@@ -236,14 +298,13 @@ export const GenericPage = ({ children }: { children: ReactChild }) => {
                     colorPalette={"red"}
                     variant="surface"
                     justifyContent="flex-start"
-                    onClick={logout} // Use the logout function from context
+                    onClick={logout}
                   >
                     <RiLogoutBoxRLine /> Log Out
                   </Button>
                 </DialogFooter>
               </DialogContent>
             </DialogRoot>
-            {/* Logout Button */}
           </VStack>
         </Box>
       </motion.div>
@@ -267,7 +328,7 @@ export const GenericPage = ({ children }: { children: ReactChild }) => {
 
         {children}
 
-        {/* Color mode button remains the same */}
+        {/* Color mode button */}
         <Box position="absolute" top="4" right="4">
           <ClientOnly fallback={<Skeleton w="10" h="10" rounded="md" />}>
             <HStack>

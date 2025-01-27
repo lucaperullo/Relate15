@@ -1,5 +1,3 @@
-// src/components/chat/ChatDialog.tsx
-
 "use client";
 
 import React, { forwardRef, useEffect, useState } from "react";
@@ -12,6 +10,7 @@ import {
   HStack,
   Text,
   BoxProps,
+  Badge,
 } from "@chakra-ui/react";
 import {
   DialogRoot,
@@ -23,7 +22,7 @@ import {
   DialogFooter,
   DialogCloseTrigger,
 } from "@/components/ui/dialog";
-import { useAuth } from "@/context";
+import { useAuth, User } from "@/context";
 import io from "socket.io-client";
 import { ENDPOINTS, API_BASE_URL } from "@/api/config";
 import { Avatar } from "../ui/avatar";
@@ -41,6 +40,7 @@ interface Message {
   content: string;
   createdAt: string;
 }
+
 export const ScrollView = forwardRef<HTMLDivElement, BoxProps>(
   ({ children, ...props }, ref) => {
     return (
@@ -67,9 +67,18 @@ export const ScrollView = forwardRef<HTMLDivElement, BoxProps>(
   }
 );
 
-export const ChatDialog = () => {
+export const ChatDialog = ({
+  match,
+  isCurrent,
+}: {
+  match?: User;
+  isCurrent?: boolean;
+}) => {
   const { state } = useAuth();
-  const [selectedMatch, setSelectedMatch] = useState<string | null>(null);
+
+  const [selectedMatch, setSelectedMatch] = useState<string | null>(
+    match?._id || null
+  );
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState<string>("");
 
@@ -136,40 +145,63 @@ export const ChatDialog = () => {
     };
   }, [selectedMatch, state.user._id]);
 
+  // Auto-fetch chat history when match prop changes
+  useEffect(() => {
+    if (match?._id) {
+      setSelectedMatch(match._id);
+      fetchChatHistory(match._id);
+    }
+  }, [match?._id]);
+
   return (
     <DialogRoot>
       <DialogTrigger asChild>
-        <Button variant="ghost" colorScheme="blue">
-          Chat
-        </Button>
+        <Box
+          p="4"
+          bg="gray.950"
+          _light={{ bg: "gray.50" }}
+          cursor="pointer"
+          _hover={{ opacity: 0.8 }}
+          transition="opacity 0.2s"
+        >
+          <HStack gap="4">
+            <Avatar
+              name={match?.name || "Unknown Match"}
+              size="lg"
+              src={match?.profilePictureUrl}
+            />
+            <VStack gap="0">
+              <Text _light={{ color: "gray.950" }} fontWeight="medium">
+                {match?.name || "New Match"}
+                {isCurrent && (
+                  <Badge ml="2" colorScheme="green">
+                    Current
+                  </Badge>
+                )}
+              </Text>
+              <Text
+                color="fg.muted"
+                textStyle="sm"
+                textOverflow="ellipsis"
+                overflow="hidden"
+                w="80%"
+                whiteSpace="nowrap"
+              >
+                {/* {match?.matchedAt
+                  ? `Matched: ${new Date(match.matchedAt).toLocaleDateString()}`
+                  : "Click to view chat"} */}
+              </Text>
+            </VStack>
+          </HStack>
+        </Box>
       </DialogTrigger>
+
       <DialogContent maxW="500px">
         <DialogHeader>
-          <DialogTitle>Chat with Your Matches</DialogTitle>
+          <DialogTitle>Chat with {match?.name || "Match"}</DialogTitle>
         </DialogHeader>
         <DialogBody>
           <VStack align="stretch">
-            {/* Match Selection */}
-            <Box>
-              <Text fontWeight="bold" mb={2}>
-                Select a Match to Chat:
-              </Text>
-              <HStack overflowX="auto">
-                {state.user.matches.map((matchId) => (
-                  <Button
-                    key={matchId}
-                    onClick={() => {
-                      setSelectedMatch(matchId);
-                      fetchChatHistory(matchId);
-                    }}
-                    variant={selectedMatch === matchId ? "solid" : "outline"}
-                  >
-                    <Avatar size="sm" name={`Match ${matchId}`} />
-                  </Button>
-                ))}
-              </HStack>
-            </Box>
-
             {/* Chat Messages */}
             {selectedMatch && (
               <Box
