@@ -13,7 +13,7 @@ export const ENDPOINTS = {
     BOOK: "/queue/book",
     STATUS: "/queue/status",
     MATCH_HISTORY: "/queue/history", // New endpoint for match history
-    CURRENT_MATCH: "/queue/match", // New endpoint for current match
+    CURRENT_MATCH: "/queue/current", // New endpoint for current match
     MATCH_COUNTS: "/queue/match-counts", // New endpoint for match counts
     CONFIRM: "/queue/confirm", // New endpoint for confirming participation
   },
