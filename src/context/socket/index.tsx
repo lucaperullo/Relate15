@@ -70,7 +70,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     if (state.isAuthenticated && !socket) {
-      const newSocket = io("http://localhost:5000", {
+      const newSocket = io("https://relate15-be.onrender.com", {
         auth: {
           token: sessionStorage.getItem("token"),
         },
