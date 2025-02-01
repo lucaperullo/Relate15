@@ -163,7 +163,7 @@ export const ChatDialog = ({
           transition="opacity 0.2s"
           onClick={() => setIsOpen(true)}
         >
-          <HStack gap="4">
+          <HStack gap="0">
             <Avatar
               name={match?.name || "Unknown Match"}
               size="lg"
