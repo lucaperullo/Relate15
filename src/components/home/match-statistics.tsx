@@ -42,7 +42,7 @@ export const MatchStatistics = ({ matches }: { matches: User[] }) => {
       </Heading>
       <Flex flexDir="column" gap={2}>
         {Object.entries(matchCounts).map(([userId, count]) => {
-          const matchedUser = matches.find((user) => user._id === userId);
+          const matchedUser = matches.find((user) => user.id === userId);
           if (!matchedUser) return null;
 
           return (

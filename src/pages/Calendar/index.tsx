@@ -55,21 +55,19 @@ export const Calendar = () => {
     socket.on("eventUpdated", (updatedEvent) => {
       setEvents((prev) =>
         prev.map((event) =>
-          event._id === updatedEvent._id ? updatedEvent : event
+          event.id === updatedEvent.id ? updatedEvent : event
         )
       );
     });
 
     socket.on("eventCanceled", (canceledEventId) => {
-      setEvents((prev) =>
-        prev.filter((event) => event._id !== canceledEventId)
-      );
+      setEvents((prev) => prev.filter((event) => event.id !== canceledEventId));
     });
 
     socket.on("eventConfirmed", (confirmedEvent) => {
       setEvents((prev) =>
         prev.map((event) =>
-          event._id === confirmedEvent._id ? confirmedEvent : event
+          event.id === confirmedEvent.id ? confirmedEvent : event
         )
       );
     });

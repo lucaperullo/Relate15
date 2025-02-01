@@ -12,7 +12,7 @@ export const MatchHistory = ({ matches }: { matches: User[] }) => (
       <AvatarGroup size="md">
         {matches.map((match) => (
           <Avatar
-            key={match._id}
+            key={match.id}
             name={match.name}
             src={match.profilePictureUrl}
           />

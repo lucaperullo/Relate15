@@ -6,13 +6,13 @@ import {
   Flex,
   Heading,
   Input,
-  Select,
   Textarea,
   VStack,
   Text,
   Spinner,
+  Alert,
 } from "@chakra-ui/react";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import axios from "axios";
 import { Field } from "@/components/ui/field";
@@ -22,7 +22,7 @@ import { motion } from "framer-motion";
 import { useColorModeValue } from "@/components/ui/color-mode";
 
 export const Signup = () => {
-  const { baseUrl, api } = useAuth();
+  const { state, dispatch, baseUrl, api } = useAuth();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -42,6 +42,8 @@ export const Signup = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    // Clear any previous error in the context
+    dispatch({ type: "SET_ERROR", payload: null });
 
     try {
       const formPayload = new FormData();
@@ -74,6 +76,8 @@ export const Signup = () => {
     } catch (error: any) {
       const errorMessage =
         error.response?.data?.message || "Registration failed";
+      // Dispatch the error to the context
+      dispatch({ type: "SET_ERROR", payload: errorMessage });
       toaster.create({
         description: errorMessage,
         type: "error",
@@ -103,7 +107,11 @@ export const Signup = () => {
       });
     }
   };
-
+  useEffect(() => {
+    return () => {
+      dispatch({ type: "SET_ERROR", payload: null });
+    };
+  }, []);
   return (
     <motion.div
       initial={{ y: "100%" }}
@@ -124,6 +132,16 @@ export const Signup = () => {
             <Heading mb={6} textAlign="center" fontSize="3xl">
               Join Relate15
             </Heading>
+
+            {/* Conditionally render the error alert if state.error exists */}
+            {state.error && (
+              <Alert.Root status="error" mb={4}>
+                <Alert.Indicator />
+                <Alert.Content>
+                  <Alert.Title>{state.error}</Alert.Title>
+                </Alert.Content>
+              </Alert.Root>
+            )}
 
             <form onSubmit={handleSubmit}>
               <VStack gap="6">

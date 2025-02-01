@@ -9,8 +9,12 @@ import {
   VStack,
   Text,
   Spinner,
+  // Importing Alert components from Chakra UI:
+  Alert,
+  AlertTitle,
+  AlertDescription,
 } from "@chakra-ui/react";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router";
 import { Field } from "@/components/ui/field";
 import { toaster } from "@/components/ui/toaster";
@@ -71,6 +75,12 @@ export const Login = () => {
     }
   };
 
+  useEffect(() => {
+    return () => {
+      dispatch({ type: "SET_ERROR", payload: null });
+    };
+  }, []);
+
   return (
     <motion.div
       initial={{ y: "100%" }}
@@ -91,6 +101,16 @@ export const Login = () => {
             <Heading mb={6} textAlign="center" fontSize="3xl">
               Welcome to Relate15
             </Heading>
+
+            {/* Conditionally render the error alert if state.error exists */}
+            {state.error && (
+              <Alert.Root status="error" mb={4}>
+                <Alert.Indicator />
+                <Alert.Content>
+                  <Alert.Title>{state.error}</Alert.Title>
+                </Alert.Content>
+              </Alert.Root>
+            )}
 
             <form onSubmit={handleLogin}>
               <VStack gap="6">

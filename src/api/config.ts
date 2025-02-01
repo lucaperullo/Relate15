@@ -26,5 +26,10 @@ export const ENDPOINTS = {
     DELETE: "/calendar/events/:id", // DELETE event
     CONFIRM: "/calendar/events/:id/confirm", // POST confirm participation
   },
+  CHAT: {
+    HISTORY: "/chat/history", // GET chat history with a specific user
+    SEND: "/chat/send", // POST send a message
+    MARK_AS_READ: "/chat/mark-as-read", // POST mark messages as read
+  },
   HEALTH: "/health",
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { forwardRef, useEffect, useState } from "react";
+import React, { forwardRef, useEffect, useState, useRef } from "react";
 import {
   Box,
   Button,
@@ -23,19 +23,12 @@ import {
   DialogCloseTrigger,
 } from "@/components/ui/dialog";
 import { useAuth, User } from "@/context";
-import io from "socket.io-client";
+import { useSocket } from "@/context/socket";
 import { ENDPOINTS, API_BASE_URL } from "@/api/config";
 import { Avatar } from "../ui/avatar";
 
-// Initialize Socket.IO client
-const socket = io(API_BASE_URL, {
-  auth: {
-    token: sessionStorage.getItem("token"), // Pass token for authentication
-  },
-});
-
 interface Message {
-  sender: string;
+  sender: any;
   receiver: string;
   content: string;
   createdAt: string;
@@ -47,6 +40,7 @@ export const ScrollView = forwardRef<HTMLDivElement, BoxProps>(
       <Box
         ref={ref}
         overflowY="auto"
+        height="400px"
         css={{
           "&::-webkit-scrollbar": {
             width: "6px",
@@ -75,83 +69,87 @@ export const ChatDialog = ({
   isCurrent?: boolean;
 }) => {
   const { state } = useAuth();
-
+  const { socket, sendMessage, messages } = useSocket();
   const [selectedMatch, setSelectedMatch] = useState<string | null>(
-    match?._id || null
+    match?.id || null
   );
-  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState<string>("");
+  const [chatHistory, setChatHistory] = useState<Message[]>([]);
+  const [isOpen, setIsOpen] = useState<boolean>(false);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  // Fetch chat history with a specific match
-  const fetchChatHistory = async (matchId: string) => {
-    try {
-      const response = await fetch(
-        `${API_BASE_URL}${ENDPOINTS.CALENDAR.EVENTS}/${matchId}/chat`,
-        {
-          headers: {
-            Authorization: `Bearer ${sessionStorage.getItem("token")}`,
-          },
+  useEffect(() => {
+    if (match?.id) {
+      setSelectedMatch(match.id);
+    }
+  }, [match?.id]);
+
+  useEffect(() => {
+    const fetchChatHistory = async () => {
+      if (selectedMatch) {
+        try {
+          const response = await fetch(
+            `${API_BASE_URL}${ENDPOINTS.CHAT.HISTORY}/${selectedMatch}`,
+            {
+              headers: {
+                Authorization: `Bearer ${sessionStorage.getItem("token")}`,
+              },
+            }
+          );
+          if (!response.ok) throw new Error("Failed to fetch chat history");
+          const data = await response.json();
+          setChatHistory(data);
+          scrollToBottom();
+
+          await fetch(
+            `${API_BASE_URL}${ENDPOINTS.CHAT.MARK_AS_READ}/${selectedMatch}`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${sessionStorage.getItem("token")}`,
+              },
+            }
+          );
+        } catch (error) {
+          console.error("Error fetching chat history:", error);
         }
-      );
-      if (!response.ok) throw new Error("Failed to fetch chat history");
-      const data = await response.json();
-      setMessages(data.messages);
-    } catch (error) {
-      console.error("Error fetching chat history:", error);
-    }
-  };
-
-  // Handle sending a message
-  const sendMessage = () => {
-    if (!input.trim() || !selectedMatch) return;
-
-    const messagePayload = {
-      receiverId: selectedMatch,
-      content: input.trim(),
-    };
-
-    // Emit the message via Socket.IO
-    socket.emit("sendMessage", messagePayload);
-
-    // Optimistically update the chat
-    const newMessage: Message = {
-      sender: state.user._id,
-      receiver: selectedMatch,
-      content: input.trim(),
-      createdAt: new Date().toISOString(),
-    };
-    setMessages((prev) => [...prev, newMessage]);
-
-    // Clear the input field
-    setInput("");
-  };
-
-  // Listen for incoming messages
-  useEffect(() => {
-    socket.on("newMessage", (message: Message) => {
-      if (
-        (message.sender === selectedMatch &&
-          message.receiver === state.user._id) ||
-        (message.sender === state.user._id &&
-          message.receiver === selectedMatch)
-      ) {
-        setMessages((prev) => [...prev, message]);
       }
-    });
-
-    // Cleanup on unmount
-    return () => {
-      socket.off("newMessage");
     };
-  }, [selectedMatch, state.user._id]);
 
-  // Auto-fetch chat history when match prop changes
+    fetchChatHistory();
+  }, [selectedMatch]);
+
   useEffect(() => {
-    if (match?._id) {
-      setSelectedMatch(match._id);
-      fetchChatHistory(match._id);
+    if (socket) {
+      socket.on("newMessage", (message) => {
+        setChatHistory((prev) => [...prev, message]);
+        scrollToBottom();
+      });
+
+      return () => {
+        socket.off("newMessage");
+      };
     }
-  }, [match?._id]);
+  }, [socket]);
+
+  const scrollToBottom = () => {
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      scrollToBottom();
+    }
+  }, [isOpen]);
+
+  const handleSendMessage = () => {
+    if (input.trim() && selectedMatch) {
+      sendMessage(selectedMatch, input.trim());
+      setInput("");
+    }
+  };
 
   return (
     <DialogRoot>
@@ -163,6 +161,7 @@ export const ChatDialog = ({
           cursor="pointer"
           _hover={{ opacity: 0.8 }}
           transition="opacity 0.2s"
+          onClick={() => setIsOpen(true)}
         >
           <HStack gap="4">
             <Avatar
@@ -179,97 +178,70 @@ export const ChatDialog = ({
                   </Badge>
                 )}
               </Text>
-              <Text
-                color="fg.muted"
-                textStyle="sm"
-                textOverflow="ellipsis"
-                overflow="hidden"
-                w="80%"
-                whiteSpace="nowrap"
-              >
-                {/* {match?.matchedAt
-                  ? `Matched: ${new Date(match.matchedAt).toLocaleDateString()}`
-                  : "Click to view chat"} */}
-              </Text>
             </VStack>
           </HStack>
         </Box>
       </DialogTrigger>
-
-      <DialogContent maxW="500px">
+      <DialogContent maxW="600px">
         <DialogHeader>
           <DialogTitle>Chat with {match?.name || "Match"}</DialogTitle>
         </DialogHeader>
         <DialogBody>
-          <VStack align="stretch">
-            {/* Chat Messages */}
-            {selectedMatch && (
-              <Box
-                border="1px"
-                borderColor="gray.200"
-                borderRadius="md"
-                p={4}
-                h="300px"
-                overflowY="scroll"
-              >
-                <ScrollView>
-                  <VStack align="stretch">
-                    {messages.map((msg, index) => (
-                      <Flex
-                        key={index}
-                        justify={
-                          msg.sender === state.user._id
-                            ? "flex-end"
-                            : "flex-start"
-                        }
-                      >
-                        <Box
-                          bg={
-                            msg.sender === state.user._id
-                              ? "blue.500"
-                              : "gray.200"
-                          }
-                          color={
-                            msg.sender === state.user._id ? "white" : "black"
-                          }
-                          px={4}
-                          py={2}
-                          borderRadius="md"
-                          maxW="70%"
-                        >
-                          <Text>{msg.content}</Text>
-                        </Box>
-                      </Flex>
-                    ))}
-                  </VStack>
-                </ScrollView>
-              </Box>
-            )}
-
-            {/* Message Input */}
-            {selectedMatch && (
-              <HStack>
-                <Input
-                  placeholder="Type your message..."
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") sendMessage();
-                  }}
-                />
-                <Button onClick={sendMessage} colorScheme="blue">
-                  Send
-                </Button>
-              </HStack>
-            )}
-          </VStack>
+          <ScrollView>
+            <VStack align="stretch">
+              {chatHistory.map((msg, index) => {
+                const isSender = msg.sender.id === state.user.id;
+                return (
+                  <Flex
+                    key={index}
+                    justify={isSender ? "flex-end" : "flex-start"}
+                    align="center"
+                    gap="2"
+                  >
+                    {!isSender && (
+                      <Avatar
+                        name={match?.name}
+                        size="sm"
+                        src={match?.profilePictureUrl}
+                      />
+                    )}
+                    <Box
+                      bg={isSender ? "blue.500" : "gray.300"}
+                      color={isSender ? "white" : "black"}
+                      px={4}
+                      py={2}
+                      borderRadius="lg"
+                      maxW="60%"
+                      position="relative"
+                    >
+                      <Text>{msg.content}</Text>
+                    </Box>
+                    {isSender && (
+                      <Avatar
+                        name={state.user.name}
+                        size="sm"
+                        src={state.user.profilePictureUrl}
+                      />
+                    )}
+                  </Flex>
+                );
+              })}
+              <div ref={messagesEndRef} />
+            </VStack>
+          </ScrollView>
         </DialogBody>
         <DialogFooter>
-          <DialogCloseTrigger asChild>
-            <Button variant="outline" colorScheme="red">
-              Close
+          <HStack width="100%">
+            <Input
+              placeholder="Type your message..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+            />
+            <Button colorScheme="blue" onClick={handleSendMessage}>
+              Send
             </Button>
-          </DialogCloseTrigger>
+          </HStack>
         </DialogFooter>
       </DialogContent>
     </DialogRoot>

@@ -41,7 +41,7 @@ export const Home = () => {
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const token = sessionStorage.getItem("token");
+        const token = localStorage.getItem("token");
         if (!token) {
           navigate("/login");
           return;
@@ -91,7 +91,7 @@ export const Home = () => {
       if (currentStatus === "matched") {
         setIsLoadingMatch(true);
         try {
-          const token = sessionStorage.getItem("token");
+          const token = localStorage.getItem("token");
           const res = await fetch(
             `${API_BASE_URL}${ENDPOINTS.QUEUE.CURRENT_MATCH}`,
             {
@@ -116,7 +116,7 @@ export const Home = () => {
     notifyPromise(
       fetch(`${API_BASE_URL}${ENDPOINTS.QUEUE.BOOK}`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${sessionStorage.getItem("token")}` },
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       }).then(async (res) => {
         const data = await res.json();
         setCurrentStatus(data.state);
@@ -140,7 +140,7 @@ export const Home = () => {
   const handleCheckStatus = () => {
     notifyPromise(
       fetch(`${API_BASE_URL}${ENDPOINTS.QUEUE.STATUS}`, {
-        headers: { Authorization: `Bearer ${sessionStorage.getItem("token")}` },
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       }).then(async (res) => {
         const data = await res.json();
         setCurrentStatus(data.state);
