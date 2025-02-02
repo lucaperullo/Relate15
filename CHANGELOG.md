@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [0.0.16](https://github.com/lucaperullo/Relate15/compare/v0.0.15...v0.0.16) (2025-02-02)
+
+
+### Bug Fixes
+
+* use envs ([7f67124](https://github.com/lucaperullo/Relate15/commit/7f671240c7c91a838ccab70f77776841f9b90a40))
+
 ### [0.0.15](https://github.com/lucaperullo/Relate15/compare/v0.0.14...v0.0.15) (2025-02-02)
 
 
