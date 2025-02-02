@@ -47,7 +47,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
       const isProd = import.meta.env.NODE_ENV === "production";
       const websocketUrl = isProd
-        ? "https://relate15.onrender.com"
+        ? import.meta.env.VITE_API_BASE_URL
         : "http://localhost:5111";
 
       const newSocket = io(websocketUrl, {
