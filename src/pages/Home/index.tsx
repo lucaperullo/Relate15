@@ -1,19 +1,20 @@
 "use client";
 
-import { Heading, Text, Button, Box, Flex, Grid } from "@chakra-ui/react";
+import { Heading, Text, Box, Flex, Grid } from "@chakra-ui/react";
 import { GenericPage } from "../../components/ui/generic-page";
 import { useColorModeValue } from "@/components/ui/color-mode";
 import React, { useEffect, useState } from "react";
 import { useAuth, User } from "@/context";
 import { useNavigate } from "react-router";
 import { useNotify } from "@/context/notify";
-import { MatchStatusButton } from "@/components/home/match-status-button";
+
 import { Features } from "@/components/home/features";
 import { MatchHistory } from "@/components/home/match-history";
 import { UserProfileCard } from "@/components/home/user-profile-card";
 import { MatchStatistics } from "@/components/home/match-statistics";
 import { StatusDialog } from "@/components/home/status-dialog";
 import { useSocket } from "@/context/socket";
+import { StartQueueButton } from "@/components/home/start-queue-button";
 
 export const Home = () => {
   const navigate = useNavigate();
@@ -24,14 +25,12 @@ export const Home = () => {
 
   const { state, dispatch } = useAuth();
   const { notifyPromise } = useNotify();
-  const { socket, isConnected } = useSocket();
+  const { socket, isConnected, queueStatus, bookCall } = useSocket();
 
   const [matchedUser, setMatchedUser] = useState<User | null>(null);
   const [matchHistory, setMatchHistory] = useState<User[]>([]);
   const [matchCounts, setMatchCounts] = useState<Record<string, number>>({});
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [currentStatus, setCurrentStatus] = useState<string>("idle");
-  const [isLoadingMatch, setIsLoadingMatch] = useState(false);
 
   /** 📌 Request Initial Queue Status via WebSocket */
   useEffect(() => {
@@ -41,10 +40,10 @@ export const Home = () => {
 
       socket.on("queueStatus", ({ state, matchedWith }) => {
         console.log(`🟢 Initial queue status: ${state}`);
-        setCurrentStatus(state);
         dispatch({ type: "SET_QUEUE_STATUS", payload: state });
 
         if (state === "matched" && matchedWith) {
+          dispatch({ type: "SET_MATCHED_USER", payload: matchedWith });
           setMatchedUser(matchedWith);
           setIsDialogOpen(true);
         }
@@ -61,10 +60,10 @@ export const Home = () => {
     if (socket) {
       socket.on("queueUpdated", ({ state, matchedWith }) => {
         console.log(`🟢 Queue updated: ${state}`);
-        setCurrentStatus(state);
         dispatch({ type: "SET_QUEUE_STATUS", payload: state });
 
         if (state === "matched" && matchedWith) {
+          dispatch({ type: "SET_MATCHED_USER", payload: matchedWith });
           setMatchedUser(matchedWith);
           setIsDialogOpen(true);
         }
@@ -107,38 +106,6 @@ export const Home = () => {
     fetchInitialData();
   }, [dispatch, navigate, notifyPromise]);
 
-  /** 📌 Book a Call (Join Queue) */
-  const handleBookCall = async () => {
-    notifyPromise(
-      fetch("/queue/book", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      }).then(async (res) => {
-        const data = await res.json();
-        setCurrentStatus(data.state);
-        dispatch({ type: "SET_QUEUE_STATUS", payload: data.state });
-
-        // **🔥 Notify WebSocket Immediately**
-        socket?.emit("queueUpdated", {
-          state: data.state,
-          matchedWith: data.matchedWith || null,
-        });
-
-        if (data.state === "matched") {
-          setMatchedUser(data.matchedWith);
-          setIsDialogOpen(true);
-        }
-
-        return data;
-      }),
-      {
-        loading: { title: "Searching...", description: "Looking for matches" },
-        success: { title: "Queued!", description: "Searching for connections" },
-        error: { title: "Error", description: "Failed to join queue" },
-      }
-    );
-  };
-
   return (
     <GenericPage>
       <Box p={4}>
@@ -163,10 +130,7 @@ export const Home = () => {
             justify="center"
             gap={4}
           >
-            <MatchStatusButton
-              status={currentStatus}
-              onClick={handleBookCall}
-            />
+            <StartQueueButton />
           </Flex>
         </Box>
 
@@ -198,9 +162,9 @@ export const Home = () => {
         {/* Status Dialog */}
         {isDialogOpen && (
           <StatusDialog
-            status={currentStatus}
+            status={queueStatus}
             user={matchedUser}
-            isLoading={isLoadingMatch}
+            isLoading={queueStatus === "waiting"}
             onClose={() => setIsDialogOpen(false)}
           />
         )}

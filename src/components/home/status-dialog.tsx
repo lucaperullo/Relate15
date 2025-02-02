@@ -11,24 +11,25 @@ import {
   DialogRoot,
   DialogTitle,
 } from "../ui/dialog";
-const Demo = ({ status }: { status?: string }) => (
+
+/** 📌 Status Indicator Avatar */
+const StatusIndicator = ({ status }: { status?: string }) => (
   <Avatar
     position="absolute"
     transform="translateY(-9px)"
     name={status === "idle" ? "!" : "?"}
   />
 );
+
 export const StatusDialog = ({
   status,
   user,
   isLoading,
-  // onConfirm,
   onClose,
 }: {
   status: string;
   user: User | null;
   isLoading: boolean;
-  // onConfirm: () => void;
   onClose: () => void;
 }) => (
   <DialogRoot open onOpenChange={onClose}>
@@ -42,6 +43,7 @@ export const StatusDialog = ({
               : "Queue Status"}
         </DialogTitle>
       </DialogHeader>
+
       <DialogBody>
         {status === "matched" ? (
           isLoading ? (
@@ -54,7 +56,7 @@ export const StatusDialog = ({
           )
         ) : status === "waiting" ? (
           <Flex direction="column" align="center" justify="center">
-            <Demo />
+            <StatusIndicator />
             <Spinner size="lg" mt={4} />
             <Text mt={4} color="gray.500">
               Searching for matches...
@@ -62,28 +64,18 @@ export const StatusDialog = ({
           </Flex>
         ) : (
           <Flex direction="column" align="center" justify="center">
-            <Demo status="idle" />
-            <Text mt={"100px"} color="gray.500">
+            <StatusIndicator status="idle" />
+            <Text mt="100px" color="gray.500">
               Ready to start matching!
             </Text>
           </Flex>
         )}
       </DialogBody>
+
       <DialogFooter>
-        {status === "matched" ? (
-          <>
-            <Button variant="outline" size="sm" mr={3} onClick={onClose}>
-              Close
-            </Button>
-            {/* <Button colorScheme="blue" size="sm" onClick={onConfirm}>
-              Confirm
-            </Button> */}
-          </>
-        ) : (
-          <Button variant="outline" size="sm" onClick={onClose}>
-            Close
-          </Button>
-        )}
+        <Button variant="outline" size="sm" onClick={onClose}>
+          Close
+        </Button>
       </DialogFooter>
     </DialogContent>
   </DialogRoot>
