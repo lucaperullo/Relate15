@@ -15,6 +15,7 @@ import { MatchStatistics } from "@/components/home/match-statistics";
 import { StatusDialog } from "@/components/home/status-dialog";
 import { useSocket } from "@/context/socket";
 import { StartQueueButton } from "@/components/home/start-queue-button";
+import { API_BASE_URL, ENDPOINTS } from "@/api/config";
 
 export const Home = () => {
   const navigate = useNavigate();
@@ -25,7 +26,7 @@ export const Home = () => {
 
   const { state, dispatch } = useAuth();
   const { notifyPromise } = useNotify();
-  const { socket, isConnected, queueStatus, bookCall } = useSocket();
+  const { socket, isConnected, queueStatus } = useSocket();
 
   const [matchedUser, setMatchedUser] = useState<User | null>(null);
   const [matchHistory, setMatchHistory] = useState<User[]>([]);
@@ -86,16 +87,26 @@ export const Home = () => {
         }
 
         // Fetch match history
-        const historyRes = await fetch("/queue/history", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setMatchHistory(await historyRes.json());
+        const historyRes = await fetch(
+          `${API_BASE_URL}${ENDPOINTS.QUEUE.MATCH_HISTORY}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        if (historyRes.ok) {
+          setMatchHistory(await historyRes.json());
+        }
 
         // Fetch match counts
-        const countsRes = await fetch("/queue/match-counts", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setMatchCounts(await countsRes.json());
+        const countsRes = await fetch(
+          `${API_BASE_URL}${ENDPOINTS.QUEUE.MATCH_COUNTS}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        if (countsRes.ok) {
+          setMatchCounts(await countsRes.json());
+        }
       } catch (error) {
         notifyPromise(Promise.reject(error), {
           error: { title: "Error", description: "Failed to load data" },

@@ -78,7 +78,12 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       newSocket.on("connect", () => {
         console.log("✅ WebSocket connected:", newSocket.id);
         setIsConnected(true);
-        newSocket.emit("getQueueStatus");
+
+        // **🔄 Request Initial Queue Status (after connect)**
+        setTimeout(() => {
+          console.log("🔄 Requesting 'getQueueStatus'...");
+          newSocket.emit("getQueueStatus");
+        }, 500);
       });
 
       newSocket.on("connect_error", (error) => {
@@ -90,8 +95,8 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         setIsConnected(false);
       });
 
-      /** 🔥 Listen for queue status updates */
-      newSocket.on("queueUpdated", ({ state, matchedWith }) => {
+      // **🔥 Handle Queue Updates**
+      const handleQueueUpdate = ({ state, matchedWith }: any) => {
         console.log(`🟢 Queue updated: ${state}`);
         setQueueStatus(state);
         dispatch({ type: "SET_QUEUE_STATUS", payload: state });
@@ -99,39 +104,47 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         if (state === "matched" && matchedWith) {
           dispatch({ type: "SET_MATCHED_USER", payload: matchedWith });
         }
-      });
+      };
 
-      /** 🔥 Listen for chat history per user */
-      newSocket.on(
-        "chatHistory",
-        ({
-          receiverId,
-          history,
-        }: {
-          receiverId: string;
-          history: ChatMessage[];
-        }) => {
-          console.log("📜 Chat history received for", receiverId, ":", history);
-          setMessages((prev) => ({
-            ...prev,
-            [receiverId]: history, // Store chat history per user
-          }));
-        }
-      );
+      // **🔥 Handle Chat History Updates**
+      const handleChatHistory = ({
+        receiverId,
+        history,
+      }: {
+        receiverId: string;
+        history: ChatMessage[];
+      }) => {
+        console.log("📜 Chat history received for", receiverId, ":", history);
+        setMessages((prev) => ({
+          ...prev,
+          [receiverId]: history, // Store chat history per user
+        }));
+      };
 
-      /** 🔥 Listen for real-time new messages */
-      newSocket.on("newMessage", (message: ChatMessage) => {
+      // **🔥 Handle New Chat Messages**
+      const handleNewMessage = (message: ChatMessage) => {
         console.log("📩 New message received:", message);
         setMessages((prev) => ({
           ...prev,
           [message.sender.id]: [...(prev[message.sender.id] || []), message],
         }));
-      });
+      };
+
+      // Register Event Listeners
+      newSocket.on("queueUpdated", handleQueueUpdate);
+      newSocket.on("chatHistory", handleChatHistory);
+      newSocket.on("newMessage", handleNewMessage);
 
       setSocket(newSocket);
 
       return () => {
         console.log("🔌 Disconnecting WebSocket...");
+
+        // Cleanup event listeners before disconnecting
+        newSocket.off("queueUpdated", handleQueueUpdate);
+        newSocket.off("chatHistory", handleChatHistory);
+        newSocket.off("newMessage", handleNewMessage);
+
         newSocket.disconnect();
       };
     }
