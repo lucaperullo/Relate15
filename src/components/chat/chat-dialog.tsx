@@ -20,18 +20,21 @@ import {
   DialogTitle,
   DialogBody,
   DialogFooter,
-  DialogCloseTrigger,
 } from "@/components/ui/dialog";
 import { useAuth, User } from "@/context";
 import { useSocket } from "@/context/socket";
-import { ENDPOINTS, API_BASE_URL } from "@/api/config";
 import { Avatar } from "../ui/avatar";
 
 interface Message {
-  sender: any;
-  receiver: string;
+  id: string;
+  sender: {
+    id: string;
+    name: string;
+    profilePictureUrl?: string;
+  };
   content: string;
   createdAt: string;
+  read: boolean;
 }
 
 export const ScrollView = forwardRef<HTMLDivElement, BoxProps>(
@@ -42,12 +45,8 @@ export const ScrollView = forwardRef<HTMLDivElement, BoxProps>(
         overflowY="auto"
         height="400px"
         css={{
-          "&::-webkit-scrollbar": {
-            width: "6px",
-          },
-          "&::-webkit-scrollbar-track": {
-            background: "transparent",
-          },
+          "&::-webkit-scrollbar": { width: "6px" },
+          "&::-webkit-scrollbar-track": { background: "transparent" },
           "&::-webkit-scrollbar-thumb": {
             background: "var(--colors-border-muted)",
             borderRadius: "3px",
@@ -69,15 +68,15 @@ export const ChatDialog = ({
   isCurrent?: boolean;
 }) => {
   const { state } = useAuth();
-  const { socket, sendMessage, messages } = useSocket();
+  const { socket, sendMessage, messages, joinRoom } = useSocket();
   const [selectedMatch, setSelectedMatch] = useState<string | null>(
     match?.id || null
   );
   const [input, setInput] = useState<string>("");
-  const [chatHistory, setChatHistory] = useState<Message[]>([]);
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
+  /** 📌 When chat opens, join the room & ensure correct match */
   useEffect(() => {
     if (match?.id) {
       setSelectedMatch(match.id);
@@ -85,52 +84,18 @@ export const ChatDialog = ({
   }, [match?.id]);
 
   useEffect(() => {
-    const fetchChatHistory = async () => {
-      if (selectedMatch) {
-        try {
-          const response = await fetch(
-            `${API_BASE_URL}${ENDPOINTS.CHAT.HISTORY}/${selectedMatch}`,
-            {
-              headers: {
-                Authorization: `Bearer ${sessionStorage.getItem("token")}`,
-              },
-            }
-          );
-          if (!response.ok) throw new Error("Failed to fetch chat history");
-          const data = await response.json();
-          setChatHistory(data);
-          scrollToBottom();
-
-          await fetch(
-            `${API_BASE_URL}${ENDPOINTS.CHAT.MARK_AS_READ}/${selectedMatch}`,
-            {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${sessionStorage.getItem("token")}`,
-              },
-            }
-          );
-        } catch (error) {
-          console.error("Error fetching chat history:", error);
-        }
-      }
-    };
-
-    fetchChatHistory();
-  }, [selectedMatch]);
-
-  useEffect(() => {
-    if (socket) {
-      socket.on("newMessage", (message) => {
-        setChatHistory((prev) => [...prev, message]);
-        scrollToBottom();
-      });
-
-      return () => {
-        socket.off("newMessage");
-      };
+    if (socket && selectedMatch) {
+      console.log(`📢 Joining room: ${selectedMatch}`);
+      joinRoom(selectedMatch);
     }
-  }, [socket]);
+  }, [socket, selectedMatch]);
+
+  /** 📌 Auto-scroll when new messages arrive */
+  useEffect(() => {
+    if (isOpen) {
+      scrollToBottom();
+    }
+  }, [isOpen, messages[selectedMatch || ""]]);
 
   const scrollToBottom = () => {
     setTimeout(() => {
@@ -138,18 +103,15 @@ export const ChatDialog = ({
     }, 100);
   };
 
-  useEffect(() => {
-    if (isOpen) {
-      scrollToBottom();
-    }
-  }, [isOpen]);
-
+  /** 📌 Send a message */
   const handleSendMessage = () => {
     if (input.trim() && selectedMatch) {
       sendMessage(selectedMatch, input.trim());
       setInput("");
     }
   };
+
+  const chatHistory = messages[selectedMatch || ""] || [];
 
   return (
     <DialogRoot>
@@ -200,9 +162,9 @@ export const ChatDialog = ({
                   >
                     {!isSender && (
                       <Avatar
-                        name={match?.name}
+                        name={msg.sender.name}
                         size="sm"
-                        src={match?.profilePictureUrl}
+                        src={msg.sender.profilePictureUrl}
                       />
                     )}
                     <Box
@@ -213,6 +175,11 @@ export const ChatDialog = ({
                       borderRadius="lg"
                       maxW="60%"
                       position="relative"
+                      css={{
+                        clipPath: isSender
+                          ? "polygon(10px 0%, 100% 0, 100% 100%, 0% 100%, 10px 80%)"
+                          : "polygon(0 0, calc(100% - 10px) 0, 100% 80%, calc(100% - 10px) 100%, 0% 100%)",
+                      }}
                     >
                       <Text>{msg.content}</Text>
                     </Box>

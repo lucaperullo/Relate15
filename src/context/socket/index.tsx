@@ -4,24 +4,30 @@ import { useAuth } from "..";
 
 type ChatMessage = {
   id: string;
-  sender: string;
-  receiver: string;
+  sender: {
+    id: string;
+    name: string;
+    profilePictureUrl?: string;
+  };
   content: string;
-  createdAt: Date;
+  createdAt: any;
+  read: boolean;
 };
 
 type SocketContextType = {
   socket: Socket | null;
   isConnected: boolean;
-  messages: ChatMessage[];
+  messages: Record<string, ChatMessage[]>; // 🔥 Store chat history per user
   sendMessage: (receiverId: string, content: string) => void;
+  joinRoom: (receiverId: string) => void;
 };
 
 const SocketContext = createContext<SocketContextType>({
   socket: null,
   isConnected: false,
-  messages: [],
+  messages: {},
   sendMessage: () => {},
+  joinRoom: () => {},
 });
 
 export const useSocket = () => useContext(SocketContext);
@@ -30,13 +36,13 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const { state } = useAuth();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<Record<string, ChatMessage[]>>({});
 
   useEffect(() => {
     if (state.isAuthenticated && !socket) {
       console.log("Attempting to connect WebSocket...");
 
-      let token =
+      const token =
         localStorage.getItem("token") || sessionStorage.getItem("token");
       console.log("🔑 Using token for WebSocket:", token);
 
@@ -45,11 +51,10 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
 
-      const isProd = import.meta.env.MODE === "production";
-      console.log(import.meta.env.MODE);
-      const websocketUrl = isProd
-        ? "wss://relate15.onrender.com"
-        : "http://localhost:5111";
+      const websocketUrl =
+        import.meta.env.MODE === "production"
+          ? "wss://relate15.onrender.com"
+          : "http://localhost:5111";
 
       const newSocket = io(websocketUrl, {
         auth: { token },
@@ -73,14 +78,29 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         setIsConnected(false);
       });
 
+      newSocket.on(
+        "chatHistory",
+        ({
+          receiverId,
+          history,
+        }: {
+          receiverId: string;
+          history: ChatMessage[];
+        }) => {
+          console.log("📜 Chat history received for", receiverId, ":", history);
+          setMessages((prev) => ({
+            ...prev,
+            [receiverId]: history, // Store chat history per user
+          }));
+        }
+      );
+
       newSocket.on("newMessage", (message: ChatMessage) => {
         console.log("📩 New message received:", message);
-        setMessages((prev) => [...prev, message]);
-      });
-
-      newSocket.on("chatHistory", (history: ChatMessage[]) => {
-        console.log("📜 Chat history received:", history);
-        setMessages(history);
+        setMessages((prev) => ({
+          ...prev,
+          [message.sender.id]: [...(prev[message.sender.id] || []), message],
+        }));
       });
 
       setSocket(newSocket);
@@ -92,8 +112,35 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [state.isAuthenticated]);
 
+  /** 📌 Function to join a chat room and fetch chat history */
+  const joinRoom = (receiverId: string) => {
+    if (socket) {
+      console.log(`📢 Joining chat room: ${receiverId}`);
+      socket.emit("joinRoom", receiverId);
+    }
+  };
+
+  /** 📌 Function to send a message */
   const sendMessage = (receiverId: string, content: string) => {
     if (socket && isConnected) {
+      const newMessage: ChatMessage = {
+        id: crypto.randomUUID(),
+        sender: {
+          id: state.user.id,
+          name: state.user.name,
+          profilePictureUrl: state.user.profilePictureUrl,
+        },
+        content,
+        createdAt: new Date().toISOString(),
+        read: false,
+      };
+
+      // ✅ Update UI instantly for faster feedback
+      setMessages((prev) => ({
+        ...prev,
+        [receiverId]: [...(prev[receiverId] || []), newMessage],
+      }));
+
       socket.emit("sendMessage", { receiverId, content });
     } else {
       console.error("Socket is not connected");
@@ -102,7 +149,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <SocketContext.Provider
-      value={{ socket, isConnected, messages, sendMessage }}
+      value={{ socket, isConnected, messages, sendMessage, joinRoom }}
     >
       {children}
     </SocketContext.Provider>
