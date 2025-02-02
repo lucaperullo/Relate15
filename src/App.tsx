@@ -9,7 +9,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Login } from "./pages/Login";
 import { Signup } from "./pages/Signup";
 import { Home } from "./pages/Home";
-import { Calendar } from "./pages/Calendar";
+
 import React, { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { useAuth } from "./context";
@@ -86,16 +86,7 @@ export const App = () => {
             // </ProtectedRoute>
           }
         />
-        <Route
-          path="/calendar"
-          element={
-            // <ProtectedRoute>
-            <ProtectedLayout>
-              <Calendar />
-            </ProtectedLayout>
-            // </ProtectedRoute>
-          }
-        />
+
         <Route path="/*" element={<Navigate to="/home" replace />} />
       </Routes>
     </AnimatePresence>

@@ -9,6 +9,7 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
+import { useSocket } from "@/context/socket";
 
 // Define the User type
 export type User = {
@@ -29,6 +30,7 @@ type AuthState = {
   isAuthenticated: boolean;
   isLoading: boolean;
   queueStatus: "idle" | "waiting" | "matched";
+  matchedUser: User | null;
   error: string | null;
   isVerifying: boolean;
   events: any[];
@@ -39,6 +41,7 @@ type Action =
   | { type: "SET_USER"; payload: User | null }
   | { type: "SET_AUTH"; payload: boolean }
   | { type: "SET_QUEUE_STATUS"; payload: AuthState["queueStatus"] }
+  | { type: "SET_MATCHED_USER"; payload: User | null }
   | { type: "SET_LOADING"; payload: boolean }
   | { type: "SET_ERROR"; payload: string | null }
   | { type: "LOGOUT"; payload?: string | null }
@@ -51,6 +54,7 @@ const initialState: AuthState = {
   isAuthenticated: false,
   isLoading: false,
   queueStatus: "idle",
+  matchedUser: null,
   error: null,
   isVerifying: true,
   events: [],
@@ -69,6 +73,9 @@ const reducer = (state: AuthState, action: Action): AuthState => {
 
     case "SET_QUEUE_STATUS":
       return { ...state, queueStatus: action.payload };
+
+    case "SET_MATCHED_USER":
+      return { ...state, matchedUser: action.payload };
 
     case "SET_LOADING":
       return { ...state, isLoading: action.payload };
@@ -99,8 +106,6 @@ type ContextType = {
   baseUrl: string;
   logout: () => Promise<void>;
   verifyAuth: () => Promise<void>;
-  fetchEvents: () => Promise<void>;
-  fetchQueueStatus: () => Promise<void>;
 };
 
 // Create the AuthContext
@@ -110,6 +115,7 @@ const AuthContext = createContext<ContextType>({} as ContextType);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
+  const { socket } = useSocket();
   const [state, dispatch] = useReducer(reducer, initialState);
 
   // Function to verify authentication
@@ -147,7 +153,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       const userData = await response.json();
       console.log("✅ Auth verification successful. User data:", userData.user);
 
-      // ✅ Store refreshed token if provided
       if (userData.token) {
         console.log("🔄 Storing refreshed token:", userData.token);
         localStorage.setItem("token", userData.token);
@@ -165,6 +170,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       console.log("✅ Authentication verification process completed.");
     }
   }, []);
+
+  // **🔥 Listen to WebSocket Events for Matchmaking**
+  useEffect(() => {
+    if (socket) {
+      socket.on("queueStatus", ({ state, matchedUser }: any) => {
+        console.log("🔥 WebSocket Queue Status Update:", state, matchedUser);
+        dispatch({ type: "SET_QUEUE_STATUS", payload: state });
+
+        if (state === "matched" && matchedUser) {
+          dispatch({ type: "SET_MATCHED_USER", payload: matchedUser });
+        }
+      });
+
+      return () => {
+        socket.off("queueStatus");
+      };
+    }
+  }, [socket]);
 
   // Function to handle logout
   const logout = useCallback(async () => {
@@ -194,7 +217,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   // Initialize authentication on component mount
   useEffect(() => {
     console.log("🔄 Initializing authentication...");
-
     verifyAuth().finally(() => {
       dispatch({ type: "SET_LOADING", payload: false });
       console.log("✅ Authentication initialization completed.");
@@ -215,8 +237,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         baseUrl: API_BASE_URL,
         logout,
         verifyAuth,
-        fetchEvents: async () => {}, // Placeholder
-        fetchQueueStatus: async () => {}, // Placeholder
       }}
     >
       {children}

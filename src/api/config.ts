@@ -11,25 +11,14 @@ export const ENDPOINTS = {
   },
   QUEUE: {
     BOOK: "/queue/book",
-    STATUS: "/queue/status",
-    MATCH_HISTORY: "/queue/history", // New endpoint for match history
-    CURRENT_MATCH: "/queue/current", // New endpoint for current match
-    MATCH_COUNTS: "/queue/match-counts", // New endpoint for match counts
-    CONFIRM: "/queue/confirm", // New endpoint for confirming participation
-  },
-  USER: {
-    PROFILE: "/user/profile",
-  },
-  CALENDAR: {
-    EVENTS: "/calendar/events", // GET all events, POST create event
-    UPDATE: "/calendar/events/:id", // PUT update event
-    DELETE: "/calendar/events/:id", // DELETE event
-    CONFIRM: "/calendar/events/:id/confirm", // POST confirm participation
+    MATCH_HISTORY: "/queue/history",
+    CURRENT_MATCH: "/queue/current",
+    MATCH_COUNTS: "/queue/match-counts",
+    CONFIRM: "/queue/confirm",
   },
   CHAT: {
-    HISTORY: "/chat/history", // GET chat history with a specific user
-    SEND: "/chat/send", // POST send a message
-    MARK_AS_READ: "/chat/mark-as-read", // POST mark messages as read
+    SEND: "/chat/send",
+    MARK_AS_READ: "/chat/mark-as-read",
   },
   HEALTH: "/health",
 };

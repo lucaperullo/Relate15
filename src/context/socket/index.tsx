@@ -1,6 +1,7 @@
 import React, { useEffect, createContext, useContext, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import { useAuth } from "..";
+import { API_BASE_URL, ENDPOINTS } from "@/api/config";
 
 type ChatMessage = {
   id: string;
@@ -14,12 +15,17 @@ type ChatMessage = {
   read: boolean;
 };
 
+type QueueStatus = "idle" | "waiting" | "matched";
+
 type SocketContextType = {
   socket: Socket | null;
   isConnected: boolean;
   messages: Record<string, ChatMessage[]>; // 🔥 Store chat history per user
   sendMessage: (receiverId: string, content: string) => void;
   joinRoom: (receiverId: string) => void;
+  queueStatus: QueueStatus;
+  isLoadingQueue: boolean;
+  bookCall: () => void;
 };
 
 const SocketContext = createContext<SocketContextType>({
@@ -28,15 +34,20 @@ const SocketContext = createContext<SocketContextType>({
   messages: {},
   sendMessage: () => {},
   joinRoom: () => {},
+  queueStatus: "idle",
+  isLoadingQueue: false,
+  bookCall: () => {},
 });
 
 export const useSocket = () => useContext(SocketContext);
 
 export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
-  const { state } = useAuth();
+  const { state, dispatch } = useAuth();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [messages, setMessages] = useState<Record<string, ChatMessage[]>>({});
+  const [queueStatus, setQueueStatus] = useState<QueueStatus>("idle");
+  const [isLoadingQueue, setIsLoadingQueue] = useState(false);
 
   useEffect(() => {
     if (state.isAuthenticated && !socket) {
@@ -67,6 +78,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       newSocket.on("connect", () => {
         console.log("✅ WebSocket connected:", newSocket.id);
         setIsConnected(true);
+        newSocket.emit("getQueueStatus");
       });
 
       newSocket.on("connect_error", (error) => {
@@ -78,6 +90,18 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         setIsConnected(false);
       });
 
+      /** 🔥 Listen for queue status updates */
+      newSocket.on("queueUpdated", ({ state, matchedWith }) => {
+        console.log(`🟢 Queue updated: ${state}`);
+        setQueueStatus(state);
+        dispatch({ type: "SET_QUEUE_STATUS", payload: state });
+
+        if (state === "matched" && matchedWith) {
+          dispatch({ type: "SET_MATCHED_USER", payload: matchedWith });
+        }
+      });
+
+      /** 🔥 Listen for chat history per user */
       newSocket.on(
         "chatHistory",
         ({
@@ -95,6 +119,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         }
       );
 
+      /** 🔥 Listen for real-time new messages */
       newSocket.on("newMessage", (message: ChatMessage) => {
         console.log("📩 New message received:", message);
         setMessages((prev) => ({
@@ -147,9 +172,46 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  /** 📌 Function to book a call */
+  const bookCall = async () => {
+    setIsLoadingQueue(true);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("Authentication required");
+
+      const response = await fetch(`${API_BASE_URL}${ENDPOINTS.QUEUE.BOOK}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) throw new Error("Failed to join queue");
+
+      const data = await response.json();
+      setQueueStatus(data.state);
+      dispatch({ type: "SET_QUEUE_STATUS", payload: data.state });
+
+      if (data.state === "matched") {
+        dispatch({ type: "SET_MATCHED_USER", payload: data.matchedWith });
+      }
+    } catch (error) {
+      console.error("❌ Error booking call:", error);
+    } finally {
+      setIsLoadingQueue(false);
+    }
+  };
+
   return (
     <SocketContext.Provider
-      value={{ socket, isConnected, messages, sendMessage, joinRoom }}
+      value={{
+        socket,
+        isConnected,
+        messages,
+        sendMessage,
+        joinRoom,
+        queueStatus,
+        isLoadingQueue,
+        bookCall,
+      }}
     >
       {children}
     </SocketContext.Provider>
