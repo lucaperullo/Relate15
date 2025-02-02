@@ -7,6 +7,7 @@ import { useColorModeValue } from "../ui/color-mode";
 import { Skeleton, SkeletonCircle } from "../ui/skeleton";
 
 export const UserProfileCard = ({ user }: { user?: User }) => {
+  console.log("USER IN PROFILE CARDx", user);
   const cardBg = useColorModeValue("gray.50", "gray.800");
   const textColor = useColorModeValue("gray.800", "whiteAlpha.900");
   const subtleTextColor = useColorModeValue("gray.500", "gray.400");
