@@ -46,6 +46,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       const isProd = import.meta.env.NODE_ENV === "production";
+      console.log(import.meta.env.NODE_ENV);
       const websocketUrl = isProd
         ? import.meta.env.VITE_API_BASE_URL
         : "http://localhost:5111";
