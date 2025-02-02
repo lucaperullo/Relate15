@@ -48,7 +48,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       const isProd = import.meta.env.MODE === "production";
       console.log(import.meta.env.MODE);
       const websocketUrl = isProd
-        ? import.meta.env.BASE_URL
+        ? "wss://relate15.onrender.com"
         : "http://localhost:5111";
 
       const newSocket = io(websocketUrl, {
