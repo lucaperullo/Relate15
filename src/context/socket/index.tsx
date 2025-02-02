@@ -45,7 +45,12 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         return;
       }
 
-      const newSocket = io("http://localhost:5111", {
+      const isProd = import.meta.env.NODE_ENV === "production";
+      const websocketUrl = isProd
+        ? "https://relate15.onrender.com"
+        : "http://localhost:5111";
+
+      const newSocket = io(websocketUrl, {
         auth: { token },
         transports: ["websocket", "polling"],
         reconnection: true,
